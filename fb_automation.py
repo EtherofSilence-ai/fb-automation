@@ -27,7 +27,7 @@ def load_secure_cookie():
     secret_cookie = os.getenv("FB_SECRET_COOKIE")
     if not secret_cookie:
         print("[-] خطأ أمني: لم يتم العثور على المتغير المخفي FB_SECRET_COOKIE في النظام.")
-        print("[!] نصيحة: تأكد من تطبيق الخطوة الثانية و 'source ~/.bashrc' بشكل صحيح.")
+        print("[!] نصيحة: تأكد من تطبيق خطوة 'export FB_SECRET_COOKIE=...' يدوياً أولاً.")
         return None
     return secret_cookie.strip()
 
@@ -45,17 +45,24 @@ def post_to_facebook(message_text, media_path=None):
         return False
         
     session = requests.Session()
-    cookie_dict = {item.split('=', 1): item.split('=', 1) for item in raw_cookie.split('; ') if '=' in item}
+    
+    # --- التعديل والمصلح الجذري والمضمون لخطأ الـ TypeError ---
+    cookie_dict = {}
+    for item in raw_cookie.split('; '):
+        if '=' in item:
+            key, val = item.split('=', 1)
+            cookie_dict[key] = val
+            
     session.cookies.update(cookie_dict)
     session.headers.update(HEADERS)
     
     print(f"[+] جاري معالجة ونشر: '{message_text[:25]}...'")
     
     # محاكاة فتح موقع فيسبوك العادي للتأكد من أن الحساب مفتوح
-    response = session.get("https://facebook.com")
+    response = session.get("https://www.facebook.com/")
     if "logout" not in response.text:
-        print("[-] خطأ أمني: فيسبوك يرفض الجلسة الحالية، يرجى تجديد الـ Cookie في ملف .bashrc.")
-        write_to_log(message_text, "فشل", "الـ Cookie منتهية الصلاحية أو تم تغيير كلمة المرور")
+        print("[-] خطأ أمني: فيسبوك يرفض الجلسة الحالية، يرجى إعادة تعيين متغير البيئة بالـ Cookie الجديدة.")
+        write_to_log(message_text, "فشل", "الـ Cookie منتهية الصلاحية")
         return False
 
     # إذا كان هناك ملف ميديا (صورة أو فيديو) مدمج مع السطر
